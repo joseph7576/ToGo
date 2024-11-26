@@ -1,3 +1,5 @@
 Project Start:
-  - User create task
-  - User delete task
+  - create task
+  - read tasks
+  - update task
+  - delete task
