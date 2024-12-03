@@ -5,11 +5,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 )
 
 const (
-	TaskStringerFormat = "|- Content: %s\n|- Is Done: %t\n|- Created: %s"
+	TaskStringerFormat = "|- Content: %s\n|- Is Done: %t\n|- Created: %s\n"
 	TaskTimeFormat     = "Jan 2 2006 @ 3:4 PM"
 )
 
@@ -30,6 +31,9 @@ func (t task) String() string {
 var tasksList []task
 
 func main() {
+	loadTasks()
+
+	fmt.Println(tasksList)
 
 	scanner := bufio.NewScanner(os.Stdin)
 
@@ -56,11 +60,15 @@ func createTask(scanner *bufio.Scanner) {
 	file, err := os.OpenFile("taskDB.txt", os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0777)
 	if err != nil {
 		fmt.Println("X Can't open or create file -> ", err)
-		return
 
+		return
 	}
 
-	defer file.Close()
+	defer func() {
+		if err = file.Close(); err != nil {
+			fmt.Println("X Can't clost the file -> ", err)
+		}
+	}()
 
 	data, err := json.Marshal(newTask)
 	if err != nil {
@@ -75,4 +83,52 @@ func createTask(scanner *bufio.Scanner) {
 	}
 
 	tasksList = append(tasksList, newTask)
+}
+
+func loadTasks() {
+
+	file, err := os.Open("taskDB.txt")
+	if err != nil {
+		fmt.Println("X Can't open or create file -> ", err)
+
+		return
+	}
+
+	defer func() {
+		if err = file.Close(); err != nil {
+			fmt.Println("X Can't clost the file -> ", err)
+
+			return
+		}
+	}()
+
+	dataBuffer := make([]byte, 8*1024)
+
+	_, err = file.Read(dataBuffer)
+	if err != nil {
+		fmt.Println("X Can't read the file -> ", err)
+
+		return
+	}
+
+	dataString := string(dataBuffer)
+
+	taskSlice := strings.Split(dataString, "\n")
+	for _, t := range taskSlice {
+		taskStruct := task{}
+
+		if t[0] != '{' && t[len(t)-1] != '}' {
+			continue
+		}
+
+		err = json.Unmarshal([]byte(t), &taskStruct)
+		if err != nil {
+			fmt.Println("X Cna't unmarshal task record to task struct -> ", err)
+
+			return
+		}
+
+		tasksList = append(tasksList, taskStruct)
+	}
+
 }
